@@ -17,9 +17,9 @@ Phase 0 — 01 저장소 뼈대 **완료**. 다음은 02 KIS 시세 전용 클�
 - `common/timeutil.py`: `now_kst`, `ensure_kst`, `parse_kst`, `parse_compact`/`to_compact`(YYYYMMDD·HHMMSS), `format_kst`, `bar_start`/`bar_end`
 - `config/base.yaml`, `.gitignore`, `.env.example`
 - `.claude/settings.json`: `.env` 읽기·수정 거부 규칙, 파일 수정 후 `ruff check` + `pytest -q` hook(`.claude/hooks/check.sh`)
-- `tests/test_common.py`: 33개 테스트
+- `tests/test_common.py`: 32개 테스트
 
-완료 기준 확인: `uv run pytest` 33 passed, `uv run ruff check` 통과, 설정 객체 print 시 `SecretStr('**********')`로 가려짐(테스트 `test_secrets_masked_everywhere`로 고정).
+완료 기준 확인: `uv run pytest` 32 passed, `uv run ruff check` 통과, 설정 객체 print 시 `SecretStr('**********')`로 가려짐(테스트 `test_secrets_masked_everywhere`로 고정).
 
 ## 결정과 이유
 
@@ -39,7 +39,6 @@ Phase 0 — 01 저장소 뼈대 **완료**. 다음은 02 KIS 시세 전용 클�
 - KIS 분봉 응답의 시각이 봉 시작인지 끝인지 확인하지 않았다. 04 백필 때 실제 응답을 `tests/fixtures/`에 저장하고 확인한다.
 - `.claude/settings.json`의 Bash 거부 규칙은 패턴 일치라서 모든 우회(`python -c`로 읽기 등)를 막지 못한다. `Read` 거부 규칙과 CLAUDE.md 규칙 6에 기대는 부분이 남아 있다.
 - 이 세션은 클라우드 컨테이너에서 진행했다. 컨테이너에서 KIS 서버에 접속할 수 있는지, `.env`를 어디에 둘지는 정하지 않았다.
-- GitHub push가 403으로 실패했다(Claude GitHub App 권한 문제). 권한을 고치기 전까지 커밋은 로컬에만 있다.
 
 ## 다음에 할 일
 
