@@ -15,10 +15,25 @@ logging:
   file_prefix: kquant       # logs/kquant_YYYY-MM-DD.log
 
 kis:
-  # 미확인: 아래 도메인은 KIS Developers 문서 기준 값이다. 02에서 실제 호출로 확인한다.
+  # 도메인은 공식 저장소 koreainvestment/open-trading-api 의 kis_devlp.yaml 값과 같다.
+  # 이 값으로 실제 호출에 성공했는지는 미확인(docs/kis_api_notes.md 참고).
   real:
     rest: https://openapi.koreainvestment.com:9443
     websocket: ws://ops.koreainvestment.com:21000
+    rate_limit_per_sec: 15   # 공식 예제는 0.05초 간격(초당 20건). 여유를 둔 값
   paper:
     rest: https://openapivts.koreainvestment.com:29443
     websocket: ws://ops.koreainvestment.com:31000
+    rate_limit_per_sec: 2    # 공식 예제는 0.5초 간격(초당 2건)
+  timeout_sec: 10
+  retry:
+    max_attempts: 5
+    base_wait_sec: 0.5       # 지수 백오프: 0.5, 1, 2, 4 ... 초
+    max_wait_sec: 8
+  token_refresh_margin_sec: 600   # 만료 10분 전이면 재발급
+  max_pages: 60                   # 연속 조회 안전장치
+  # 미확인: 분봉의 stck_cntg_hour가 봉 시작 시각인지(start) 끝 시각인지(end).
+  # scripts/probe_kis.py로 확인한 뒤 고친다. 파서는 이 값으로 ts를 봉 시작 시각으로 맞춘다.
+  minute_bar_label: start
+  # 미확인: 분봉 output2의 acml_tr_pbmn이 당일 누적인지(true) 그 분의 거래대금인지(false).
+  minute_value_cumulative: true

@@ -2,7 +2,7 @@
 
 ## 현재 단계
 
-Phase 0 — 01 저장소 뼈대 **완료**. 다음은 02 KIS 시세 전용 클라이언트.
+Phase 0 — 01 저장소 뼈대 **완료**. 02 KIS 시세 전용 클라이언트 **진행 중(중단)**: 설정만 확장했고 클라이언트 코드는 아직 없음.
 
 ## 완료한 일
 
@@ -21,6 +21,19 @@ Phase 0 — 01 저장소 뼈대 **완료**. 다음은 02 KIS 시세 전용 클�
 
 완료 기준 확인: `uv run pytest` 32 passed, `uv run ruff check` 통과, 설정 객체 print 시 `SecretStr('**********')`로 가려짐(테스트 `test_secrets_masked_everywhere`로 고정).
 
+### 2026-11-10 · 02 KIS 클라이언트 (중단)
+
+- 공식 저장소 `koreainvestment/open-trading-api`(examples_llm)에서 아래 내용을 확인했다. `docs/kis_api_notes.md`는 아직 쓰지 않았다.
+  - 토큰: `POST /oauth2/tokenP`, body `grant_type=client_credentials, appkey, appsecret`. 응답 `access_token, token_type, expires_in, access_token_token_expired`. 유효 1일, 6시간 안에 다시 요청하면 같은 토큰, 발급은 1분에 1회
+  - 현재가: `GET /uapi/domestic-stock/v1/quotations/inquire-price`, tr_id `FHKST01010100`
+  - 일봉: `GET .../inquire-daily-itemchartprice`, tr_id `FHKST03010100`, 한 번에 최대 100건
+  - 당일 분봉: `GET .../inquire-time-itemchartprice`, tr_id `FHKST03010200`, 한 번에 최대 30건, 전일 분봉 미제공
+  - 일별 분봉: `GET .../inquire-time-dailychartprice`, tr_id `FHKST03010230`, 한 번에 최대 120건, 최대 1년 보관(문서 기준). 모의투자 Postman 샘플에는 이 API가 없다 → 모의 지원 여부 미확인
+  - 성공 판정은 본문 `rt_cd == "0"`, 실패 시 `msg_cd`, `msg1`. 연속 조회는 응답 헤더 `tr_cont`가 `M`/`F`이면 다음 요청에 `tr_cont: N`
+  - 호출 간격은 공식 예제 기준 실전 0.05초, 모의 0.5초. 초당 한도 초과 코드는 `EGW00201`
+- `config/base.yaml`과 `common/config.py`에 KIS 호출 한도, 타임아웃, 재시도, 토큰 갱신 여유, 최대 페이지 수, 분봉 시각 기준(`minute_bar_label`), 분봉 거래대금 누적 여부(`minute_value_cumulative`)를 추가했다.
+- **중단 이유**: 이 클라우드 컨테이너에서는 KIS 서버 연결이 끊긴다(connection reset). 실제 응답을 받을 수 없어 fixture 저장, 과거 분봉 범위 확인을 할 수 없다. 사용자와 상의해 02는 로컬 PC의 Claude Code에서 이어 가기로 했다.
+
 ## 결정과 이유
 
 - **naive datetime은 받지 않는다.** `ensure_kst`가 ValueError를 낸다. 타임존을 추측하면 9시간 어긋난 데이터가 조용히 섞일 수 있어서다. 예외는 `parse_kst`/`parse_compact`로, 타임존 표기가 없는 문자열은 KST 벽시계 시각으로 해석한다(KIS 응답이 KST 문자열이라고 보고).
@@ -35,6 +48,12 @@ Phase 0 — 01 저장소 뼈대 **완료**. 다음은 02 KIS 시세 전용 클�
 
 ## 미확인 사항
 
+- 분봉 `stck_cntg_hour`가 봉 시작 시각인지 끝 시각인지. 장중에 당일 분봉을 조회해 맨 앞 행(진행 중인 봉)의 시각을 보면 판별된다
+- 분봉 `acml_tr_pbmn`이 당일 누적인지 그 분의 거래대금인지. 필드 이름은 "누적"
+- 당일 분봉 맨 앞 행의 `cntg_vol`은 첫 체결 전까지 이전 분봉 값이 들어간다(공식 문서). 진행 중인 봉은 버려야 한다
+- 토큰 만료 시 오는 `msg_cd` 값
+- 일별 분봉 API가 모의투자에서 되는지
+
 - KIS 도메인(`config/base.yaml`의 `kis.real`, `kis.paper`)은 문서 기준 값이다. 02에서 실제 호출로 확인해야 한다.
 - KIS 분봉 응답의 시각이 봉 시작인지 끝인지 확인하지 않았다. 04 백필 때 실제 응답을 `tests/fixtures/`에 저장하고 확인한다.
 - `.claude/settings.json`의 Bash 거부 규칙은 패턴 일치라서 모든 우회(`python -c`로 읽기 등)를 막지 못한다. `Read` 거부 규칙과 CLAUDE.md 규칙 6에 기대는 부분이 남아 있다.
@@ -42,5 +61,6 @@ Phase 0 — 01 저장소 뼈대 **완료**. 다음은 02 KIS 시세 전용 클�
 
 ## 다음에 할 일
 
-- 02 KIS 시세 전용 클라이언트. 실전 키 필요, 로컬 PC에서 진행하는 쪽을 권장
+- **02를 로컬 PC의 Claude Code에서 이어서 한다.** 남은 일: `docs/kis_api_notes.md`, `broker/kis_client.py`(토큰 캐시, 레이트 리미터, rt_cd 판정, tenacity 재시도, 연속 조회), 원본 JSON과 파서 분리, 실제 응답 fixture 저장, live 마커 테스트, `scripts/try_kis.py`, 과거 분봉 조회 범위 실측
+
 - 05·06(매일 수집, 실시간 수집)은 상시 켜져 있는 로컬 PC나 서버에서 돌려야 한다

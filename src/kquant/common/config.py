@@ -8,9 +8,10 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Literal
 
 import yaml
-from pydantic import BaseModel, ConfigDict, SecretStr
+from pydantic import BaseModel, ConfigDict, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -38,11 +39,24 @@ class LoggingConfig(_Frozen):
 class KisEndpoint(_Frozen):
     rest: str
     websocket: str
+    rate_limit_per_sec: float = Field(gt=0)
+
+
+class KisRetryConfig(_Frozen):
+    max_attempts: int = Field(default=5, ge=1)
+    base_wait_sec: float = Field(default=0.5, ge=0)
+    max_wait_sec: float = Field(default=8, ge=0)
 
 
 class KisConfig(_Frozen):
     real: KisEndpoint
     paper: KisEndpoint
+    timeout_sec: float = Field(default=10, gt=0)
+    retry: KisRetryConfig = KisRetryConfig()
+    token_refresh_margin_sec: int = Field(default=600, ge=0)
+    max_pages: int = Field(default=60, ge=1)
+    minute_bar_label: Literal["start", "end"] = "start"
+    minute_value_cumulative: bool = True
 
 
 class Secrets(BaseSettings):
